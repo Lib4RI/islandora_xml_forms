@@ -93,18 +93,30 @@
 	</xsl:template>
 
 	<xsl:template match="mods:name">
-		<xsl:choose>
-			<xsl:when test="mods:role/mods:roleTerm[@type='text']='creator' or mods:role/mods:roleTerm[@type='code']='cre' ">
+		<!--<xsl:choose>-->
+			  <!-- HK, origin version
+          <xsl:when test="mods:role/mods:roleTerm[@type='text']='creator' or mods:role/mods:roleTerm[@type='code']='cre' ">
+        --> 
+		<xsl:if test="@type='personal'">
+			<xsl:choose>
+			<xsl:when test="mods:role/mods:roleTerm[@type='text']='author'">
 				<dc:creator>
 					<xsl:call-template name="name"/>
 				</dc:creator>
 			</xsl:when>
+			<!-- HK, added contributor mapping-->
+			<xsl:when test="mods:role/mods:roleTerm[@type='text']!='author'">
+				<dc:contributor>
+					<xsl:call-template name="name"/>
+				</dc:contributor>
+			</xsl:when>			
 			<xsl:otherwise>
 				<dc:contributor>
 					<xsl:call-template name="name"/>
 				</dc:contributor>
 			</xsl:otherwise>
-		</xsl:choose>
+			</xsl:choose>
+		</xsl:if>
 	</xsl:template>
 
 	<xsl:template match="mods:classification">
@@ -114,15 +126,13 @@
 	</xsl:template>
 
 	<xsl:template match="mods:subject[mods:topic | mods:name | mods:occupation | mods:geographic | mods:hierarchicalGeographic | mods:cartographics | mods:temporal] ">
-		<dc:subject>
-			<xsl:for-each select="mods:topic | mods:occupation">
-				<xsl:value-of select="."/>
-				<xsl:if test="position()!=last()">--</xsl:if>
-			</xsl:for-each>
-			<xsl:for-each select="mods:name">
-				<xsl:call-template name="name"/>
-			</xsl:for-each>
-		</dc:subject>
+		
+		<xsl:for-each select="mods:topic">
+			<dc:subject>
+				<xsl:value-of select="."/>				
+			</dc:subject>
+		</xsl:for-each> 			 
+			
 
 		<xsl:for-each select="mods:titleInfo/mods:title">
 			<dc:subject>
@@ -170,7 +180,8 @@
 		</xsl:if>
 	</xsl:template>
 
-	<xsl:template match="mods:abstract | mods:tableOfContents | mods:note">
+    <!-- <xsl:template match="mods:abstract | mods:tableOfContents | mods:note">  -->
+	<xsl:template match="mods:abstract | mods:tableOfContents">
 		<dc:description>
 			<xsl:value-of select="."/>
 		</dc:description>
@@ -185,14 +196,14 @@
 			</dc:date>
 		</xsl:for-each>
 		<xsl:apply-templates select="*[not(@point)]"/> 
-		
-		<xsl:for-each select="mods:publisher">
+		    
+		<xsl:for-each select="mods:publisher"> 
 			<dc:publisher>
 				<xsl:value-of select="."/>
 			</dc:publisher>
 		</xsl:for-each>
 	
-	</xsl:template>
+	</xsl:template>	
 	
 	<xsl:template match="mods:dateIssued | mods:dateCreated | mods:dateCaptured">
 		<dc:date>
@@ -329,7 +340,7 @@
 		</dc:language>
 	</xsl:template>
 
-	<xsl:template match="mods:relatedItem[mods:titleInfo | mods:name | mods:identifier | mods:location]">
+	<xsl:template match="mods:relatedItem[mods:titleInfo | mods:name | mods:identifier | mods:location | mods:originInfo]">
 		<xsl:choose>
 			<xsl:when test="@type='original'">
 				<dc:source>
@@ -341,8 +352,9 @@
 						</xsl:if>
 					</xsl:for-each>
 				</dc:source>
-			</xsl:when>
-			<xsl:when test="@type='series'"/>
+			</xsl:when> 			
+			<xsl:when test="@type='series'"/>			
+			
 			<xsl:otherwise>
 				<dc:relation>
 					<xsl:for-each
@@ -353,12 +365,44 @@
 						</xsl:if>
 					</xsl:for-each>
 				</dc:relation>
-			</xsl:otherwise>
+			</xsl:otherwise>		
 		</xsl:choose>
+		<xsl:for-each select="mods:originInfo/mods:publisher"> 
+			<dc:publisher>
+				<xsl:value-of select="."/>
+			</dc:publisher>
+		</xsl:for-each>	
+		<xsl:for-each select="mods:identifier">			
+			<dc:identifier>
+			<xsl:variable name="type" select="translate(@type,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')"/>	
+				<xsl:value-of select="$type"/>: <xsl:value-of select="."/>
+			</dc:identifier>
+		</xsl:for-each>					
+		<!-- HK, added for Name elements under relatedItem-->
+		<xsl:for-each select="mods:name">	
+		<xsl:if test="@type='personal'">		
+			<xsl:choose>
+			<xsl:when test="mods:role/mods:roleTerm[@type='text']='author'">
+				<dc:creator>
+					<xsl:call-template name="name"/>
+				</dc:creator>
+			</xsl:when>
+			<xsl:when test="mods:role/mods:roleTerm[@type='text']!='author'">
+				<dc:contributor>
+					<xsl:call-template name="name"/>
+				</dc:contributor>
+			</xsl:when>			
+			<xsl:otherwise>
+				<dc:contributor>
+					<xsl:call-template name="name"/>
+				</dc:contributor>
+			</xsl:otherwise>
+			</xsl:choose>
+		</xsl:if>
+		</xsl:for-each>		
+		
 	</xsl:template>
 	
-
-
 	<xsl:template match="mods:accessCondition">
 		<dc:rights>
 			<xsl:value-of select="."/>
@@ -371,11 +415,26 @@
 				<xsl:value-of select="."/>
 				<xsl:text> </xsl:text>
 			</xsl:for-each>
+			<!-- HK, added for Name elements under relatedItem-->
+			<xsl:for-each select="mods:name/mods:namePart[not(@type)]">
+				<xsl:value-of select="."/>
+				<xsl:text> </xsl:text>
+			</xsl:for-each>
+			
 			<xsl:value-of select="mods:namePart[@type='family']"/>
+			<!-- HK, added for Name elements under relatedItem-->
+			<xsl:value-of select="mods:name/mods:namePart[@type='family']"/>
+			
 			<xsl:if test="mods:namePart[@type='given']">
 				<xsl:text>, </xsl:text>
 				<xsl:value-of select="mods:namePart[@type='given']"/>
 			</xsl:if>
+			<!-- HK, added for Name elements under relatedItem-->
+			<xsl:if test="mods:name/mods:namePart[@type='given']">
+				<xsl:text>, </xsl:text>
+				<xsl:value-of select="mods:name/mods:namePart[@type='given']"/>
+			</xsl:if>
+			
 			<xsl:if test="mods:namePart[@type='date']">
 				<xsl:text>, </xsl:text>
 				<xsl:value-of select="mods:namePart[@type='date']"/>
@@ -391,6 +450,14 @@
 				<xsl:value-of select="normalize-space(child::*)"/>
 				<xsl:text>) </xsl:text>
 			</xsl:for-each>
+			<!-- HK, added for Name elements under relatedItem-->
+			<xsl:for-each select="mods:name/mods:role[mods:roleTerm[@type='text']!='creator']">
+				<xsl:text> (</xsl:text>
+				<xsl:value-of select="normalize-space(child::*)"/>
+				<xsl:text>) </xsl:text>
+			</xsl:for-each>
+			
+			
 		</xsl:variable>
 		<xsl:value-of select="normalize-space($name)"/>
 	</xsl:template>
